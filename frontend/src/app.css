@@ -1,0 +1,98 @@
+/* FPV Deal Finder - Global Styles */
+/* Dark mode with electric blue/green FPV aesthetic */
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Custom utility classes ─────────────────────────── */
+
+@layer components {
+  /* Electric blue accent button */
+  .btn-primary {
+    @apply bg-electric-blue text-dark-900 font-semibold px-4 py-2 rounded-lg
+           hover:bg-opacity-90 transition-all duration-200
+           shadow-[0_0_15px_rgba(0,212,255,0.3)]
+           hover:shadow-[0_0_25px_rgba(0,212,255,0.5)];
+  }
+
+  /* Electric green accent button */
+  .btn-success {
+    @apply bg-electric-green text-dark-900 font-semibold px-4 py-2 rounded-lg
+           hover:bg-opacity-90 transition-all duration-200
+           shadow-[0_0_15px_rgba(0,255,136,0.3)];
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply bg-dark-600 text-gray-300 font-medium px-4 py-2 rounded-lg
+           border border-dark-500 hover:border-electric-blue hover:text-electric-blue
+           transition-all duration-200;
+  }
+
+  /* Card with subtle glow on hover */
+  .card {
+    @apply bg-dark-800 rounded-xl border border-dark-600
+           hover:border-dark-500 transition-all duration-200
+           hover:shadow-[0_0_20px_rgba(0,212,255,0.1)];
+  }
+
+  /* Deal badge */
+  .deal-badge {
+    @apply bg-electric-green bg-opacity-20 text-electric-green
+           text-xs font-bold px-2 py-0.5 rounded-full
+           border border-electric-green border-opacity-30;
+  }
+
+  /* Sale badge */
+  .sale-badge {
+    @apply bg-red-500 bg-opacity-20 text-red-400
+           text-xs font-bold px-2 py-0.5 rounded-full
+           border border-red-500 border-opacity-30;
+  }
+
+  /* Category tag */
+  .category-tag {
+    @apply bg-dark-600 text-gray-400 text-xs px-2 py-0.5 rounded
+           border border-dark-500;
+  }
+
+  /* Search input */
+  .search-input {
+    @apply w-full bg-dark-700 text-gray-100 placeholder-gray-500
+           border border-dark-500 rounded-xl px-4 py-3
+           focus:outline-none focus:border-electric-blue
+           focus:shadow-[0_0_0_3px_rgba(0,212,255,0.15)]
+           transition-all duration-200;
+  }
+
+  /* Sidebar filter section */
+  .filter-section {
+    @apply border-b border-dark-600 pb-4 mb-4;
+  }
+}
+
+/* ── Scrollbar styling ──────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1c1c22;
+}
+::-webkit-scrollbar-thumb {
+  background: #2c2c33;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00d4ff44;
+}
+
+/* ── Selection color ───────────────────────────────── */
+::selection {
+  background: rgba(0, 212, 255, 0.2);
+  color: #e5e7eb;
+}

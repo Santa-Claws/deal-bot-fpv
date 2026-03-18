@@ -1,0 +1,46 @@
+# ── Web Framework ─────────────────────────────────────
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# ── Database ──────────────────────────────────────────
+# SQLAlchemy with async support (asyncpg driver for PostgreSQL)
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+alembic==1.13.1  # Database migrations
+
+# ── Configuration ─────────────────────────────────────
+pydantic-settings==2.1.0  # Reads settings from .env files
+python-dotenv==1.0.0
+pyyaml==6.0.1  # For config/ai.yaml
+
+# ── Web Scraping ──────────────────────────────────────
+playwright==1.41.1  # Browser automation for JS-rendered pages
+playwright-stealth==1.0.6  # Reduce bot detection
+
+# ── Task Queue ────────────────────────────────────────
+# Celery handles scheduled scraping in the background
+celery[redis]==5.3.6
+redis==5.0.1
+
+# ── Search ────────────────────────────────────────────
+meilisearch==0.31.0  # Client for Meilisearch search engine
+
+# ── HTTP Client ───────────────────────────────────────
+httpx==0.26.0  # Async HTTP for Ollama/OpenAI API calls
+aiohttp==3.9.1
+
+# ── AI ────────────────────────────────────────────────
+openai==1.11.0  # OpenAI SDK (also works as Ollama client via base_url)
+
+# ── Notifications ─────────────────────────────────────
+apprise==1.7.4  # Unified notification library (Discord, Slack, email, etc.)
+
+# ── Utilities ─────────────────────────────────────────
+python-dateutil==2.8.2
+tenacity==8.2.3  # Retry logic for scrapers
+structlog==24.1.0  # Structured logging
+
+# ── Dev / Testing ─────────────────────────────────────
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0  # Also used for TestClient in tests

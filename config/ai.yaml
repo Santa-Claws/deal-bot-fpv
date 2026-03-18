@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────
+# FPV Deal Finder - AI Configuration
+# ─────────────────────────────────────────────────────────────
+#
+# This file controls which AI model is used for:
+# 1. Query understanding ("2207 motors" → structured filters)
+# 2. Deal scoring (is this actually a good deal? 0-10)
+#
+# To switch models: change the "model" field and restart
+# the backend container: docker compose restart backend
+#
+# Model requirements (rough VRAM estimates):
+#   phi3:mini      → 4GB VRAM   (fast, good for basic queries)
+#   mistral:7b     → 8GB VRAM   (balanced, recommended)
+#   llama3:8b      → 8GB VRAM   (good quality)
+#   llama3:70b     → 40GB VRAM  (best quality, needs big GPU)
+#
+# GPU specs (development):
+#   RTX 3080 12GB → mistral:7b works great
+#
+# ─────────────────────────────────────────────────────────────
+
+ai:
+  # Primary provider: "ollama" (local) or "openai"
+  provider: ollama
+
+  ollama:
+    # Model to use for inference
+    # Run `docker exec fpv-ollama ollama list` to see installed models
+    # Run `docker exec fpv-ollama ollama pull mistral:7b` to install
+    model: mistral:7b
+
+    host: http://ollama:11434
+
+    # If Ollama fails/times out, automatically try OpenAI
+    fallback_to_openai: true
+
+    # Timeout for AI requests (seconds)
+    # Larger models are slower, especially on first query (cold start)
+    timeout: 30
+
+  openai:
+    # Only used if Ollama fails and fallback_to_openai is true
+    # Set OPENAI_API_KEY in .env to enable
+    model: gpt-3.5-turbo
+
+  # ── Model presets ──────────────────────────────────
+  # Quick references for common hardware configs
+  # To use a preset: change "model" above to the preset value
+  presets:
+    # 4GB VRAM (low-end GPU or CPU inference)
+    lightweight: phi3:mini
+
+    # 8GB VRAM (RTX 3070/3080, recommended)
+    balanced: mistral:7b
+
+    # 12GB+ VRAM (RTX 3080 Ti, 4080, etc.)
+    high_quality: llama3:8b
+
+    # 40GB+ VRAM (A100, multi-GPU) - overkill for this use case
+    powerful: llama3:70b
