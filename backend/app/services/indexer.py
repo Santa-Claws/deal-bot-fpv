@@ -25,9 +25,15 @@ from app.services.search import search_service
 logger = structlog.get_logger()
 
 
+BATCH_SIZE = 200  # Commit every N products to avoid huge transactions
+
+
 async def index_products(store_name: str, products: list[dict]):
     """
     Save scraped products to DB and search index.
+
+    Processes in batches of BATCH_SIZE to avoid single massive transactions
+    that time out or exhaust memory on large stores (5000+ products).
 
     Args:
         store_name: Name matching Store.name in the database
@@ -36,89 +42,90 @@ async def index_products(store_name: str, products: list[dict]):
     if not products:
         return
 
+    # Look up store ID once
     async with AsyncSessionLocal() as session:
-        # Get the store ID
-        result = await session.execute(
-            select(Store).where(Store.name == store_name)
-        )
+        result = await session.execute(select(Store).where(Store.name == store_name))
         store = result.scalar_one_or_none()
         if not store:
             logger.error("Store not found", store=store_name)
             return
+        store_id = store.id
 
-        saved_count = 0
-        updated_count = 0
-        deal_count = 0
+    saved_count = 0
+    updated_count = 0
+    deal_count = 0
 
-        for product_data in products:
-            try:
-                # Check if this product already exists (by external_id + store)
-                result = await session.execute(
-                    select(Product).where(
-                        Product.store_id == store.id,
-                        Product.external_id == product_data["external_id"],
+    # Process in batches
+    for batch_start in range(0, len(products), BATCH_SIZE):
+        batch = products[batch_start: batch_start + BATCH_SIZE]
+
+        async with AsyncSessionLocal() as session:
+            for product_data in batch:
+                try:
+                    result = await session.execute(
+                        select(Product).where(
+                            Product.store_id == store_id,
+                            Product.external_id == product_data["external_id"],
+                        )
                     )
-                )
-                existing = result.scalar_one_or_none()
+                    existing = result.scalar_one_or_none()
 
-                if existing:
-                    # Update existing product metadata
-                    existing.title = product_data["title"]
-                    existing.image_url = product_data.get("image_url")
-                    existing.category = product_data.get("category")
-                    existing.specs = product_data.get("specs", {})
-                    existing.updated_at = datetime.utcnow()
-                    product = existing
-                    updated_count += 1
-                else:
-                    # Create new product
-                    product = Product(
-                        store_id=store.id,
-                        external_id=product_data["external_id"],
-                        title=product_data["title"],
-                        url=product_data["url"],
-                        image_url=product_data.get("image_url"),
-                        category=product_data.get("category"),
-                        specs=product_data.get("specs", {}),
+                    if existing:
+                        existing.title = product_data["title"]
+                        existing.image_url = product_data.get("image_url")
+                        existing.category = product_data.get("category")
+                        existing.specs = product_data.get("specs", {})
+                        existing.updated_at = datetime.utcnow()
+                        product = existing
+                        updated_count += 1
+                    else:
+                        product = Product(
+                            store_id=store_id,
+                            external_id=product_data["external_id"],
+                            title=product_data["title"],
+                            url=product_data["url"],
+                            image_url=product_data.get("image_url"),
+                            category=product_data.get("category"),
+                            specs=product_data.get("specs", {}),
+                        )
+                        session.add(product)
+                        await session.flush()
+                        saved_count += 1
+
+                    price_entry = PriceHistory(
+                        product_id=product.id,
+                        price=product_data["price"],
+                        original_price=product_data.get("original_price"),
+                        in_stock=product_data.get("in_stock", True),
                     )
-                    session.add(product)
-                    await session.flush()  # Get the product.id
-                    saved_count += 1
+                    session.add(price_entry)
 
-                # Always record price history (even if price hasn't changed)
-                price_entry = PriceHistory(
-                    product_id=product.id,
-                    price=product_data["price"],
-                    original_price=product_data.get("original_price"),
-                    in_stock=product_data.get("in_stock", True),
-                )
-                session.add(price_entry)
+                    if await _is_deal(session, product, product_data):
+                        deal = await _create_deal(session, product, product_data)
+                        if deal:
+                            deal_count += 1
+                            await _maybe_notify(product, deal, product_data)
 
-                # Detect and record deals
-                if await _is_deal(session, product, product_data):
-                    deal = await _create_deal(session, product, product_data)
-                    if deal:
-                        deal_count += 1
+                except Exception as e:
+                    logger.warning(
+                        "Failed to save product",
+                        title=product_data.get("title", "unknown"),
+                        error=str(e),
+                    )
+                    continue
 
-                        # Send notification for good deals
-                        await _maybe_notify(product, deal, product_data)
+            await session.commit()
 
-            except Exception as e:
-                logger.warning(
-                    "Failed to save product",
-                    title=product_data.get("title", "unknown"),
-                    error=str(e),
-                )
-                continue
+        batch_end = min(batch_start + BATCH_SIZE, len(products))
+        logger.info("Batch committed", store=store_name, batch=f"{batch_end}/{len(products)}")
 
-        await session.commit()
-        logger.info(
-            "Indexing complete",
-            store=store_name,
-            saved=saved_count,
-            updated=updated_count,
-            deals=deal_count,
-        )
+    logger.info(
+        "Indexing complete",
+        store=store_name,
+        saved=saved_count,
+        updated=updated_count,
+        deals=deal_count,
+    )
 
     # Index to Meilisearch for search
     await _index_to_search(store_name, products)
