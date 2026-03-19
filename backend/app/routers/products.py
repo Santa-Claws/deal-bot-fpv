@@ -168,7 +168,7 @@ async def search_products(
 
     return SearchResponse(
         hits=hits,
-        total=results.get("totalHits", len(hits)),
+        total=results.get("estimatedTotalHits", results.get("totalHits", len(hits))),
         query=q,
         parsed_filters=parsed_filters,
         processing_time_ms=results.get("processingTimeMs", 0),
