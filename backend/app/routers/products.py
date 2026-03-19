@@ -101,12 +101,17 @@ async def search_products(
     filters = []
 
     effective_category = category or parsed_filters.get("category")
-    if effective_category:
+    # "store" is not a real product category — AI sometimes sets it when the query
+    # is a brand/manufacturer name (e.g. "hdzero", "geprc"). Skip it.
+    if effective_category and effective_category != "store":
         filters.append(f'category = "{effective_category}"')
 
-    effective_store = store or parsed_filters.get("store")
-    if effective_store:
-        filters.append(f'store = "{effective_store}"')
+    # Only apply store as a hard filter when it comes from an explicit URL param
+    # (sidebar dropdown). AI-parsed store names are often brand/manufacturer names
+    # (e.g. "hdzero" = brand sold by many stores, not just the HDZero store),
+    # so we let the search query find them by title instead.
+    if store:
+        filters.append(f'store = "{store}"')
 
     effective_max_price = max_price or parsed_filters.get("max_price")
     if effective_max_price:
@@ -122,9 +127,9 @@ async def search_products(
     if deals_only is True or parsed_filters.get("deals_only"):
         filters.append("is_deal = true")
 
-    # Build search terms
-    search_terms = parsed_filters.get("search_terms", [])
-    effective_query = q or " ".join(search_terms) if search_terms else q
+    # Always use the original query so brand/manufacturer names in the query
+    # match product titles (e.g. "hdzero" finds products with HDZero in the name)
+    effective_query = q
 
     # Run the search
     try:
